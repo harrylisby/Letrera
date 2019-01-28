@@ -2,21 +2,33 @@
 
 #include <FastLED.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
-#include <WiFiUdp.h>
-#include <ArduinoOTA.h>
+#include <PubSubClient.h>
+#include <PubSubClientTools.h>
+
+#include <Thread.h>             // https://github.com/ivanseidel/ArduinoThread
+#include <ThreadController.h>
 
 //WiFi configuration
-const char* ssid = "Lisby 2G";
-const char* password = "lisby12345";
+#define ssid "Lisby 2G"
+#define password "lisby12345"
+#define MQTT_SERVER "192.168.1.10"
 //In the future add AP function for unknown networks
 
+WiFiClient espClient;
+PubSubClient client(MQTT_SERVER, 1883, espClient);
+PubSubClientTools mqtt(client);
+
+ThreadController threadControl = ThreadController();
+Thread thread = Thread();
+
+int value = 0;
+String s = "";
 
 #define LED_PIN     5
 #define NUM_LEDS    20
 #define BRIGHTNESS  255
 #define LED_TYPE    WS2812B
-#define COLOR_ORDER RGB//BGR
+#define COLOR_ORDER RGB
 CRGB leds[NUM_LEDS];
 
 #define UPDATES_PER_SECOND 400
@@ -59,21 +71,42 @@ void setup() {
     Serial.println("Booting");
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
-    while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-        Serial.println("Connection Failed! Rebooting...");
-        delay(2000);
-        ESP.restart();
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
     }
+    Serial.print(s+" connected with IP: ");
     Serial.println(WiFi.localIP());
+
+    // Connect to MQTT
+    Serial.print(s+"Connecting to MQTT: "+MQTT_SERVER+" ... ");
+    if (client.connect("DeskopRGB")) {
+      Serial.println("connected");
+
+      mqtt.subscribe("room/desktopRGB_Color", desktopRGB_Color_subscriber);
+      mqtt.subscribe("room/desktopRGB_Brightness", desktopRGB_Brightness_subscriber);
+      mqtt.subscribe("room/desktopRGB_Spectrum", desktopRGB_Spectrum_subscriber);
+    } else {
+      Serial.println(s+"failed, rc="+client.state());
+    }
+
+    // Enable Thread
+    thread.onRun(publisher);
+    thread.setInterval(2000);
+    threadControl.add(&thread);
 }
 
 bool firstTime = true;
 bool overrideBrightness=true;
-int setBrightness = 127;
+int setBrightness = 127; //Replace this with last used brightness
 uint32_t lastTime = 0;
+int redValue,greenValue,blueValue,brightnessValue,firstTimeBrightness;
+bool spectrumCycle = true;
 
 void loop()
 {
+    client.loop();
+    threadControl.run();
     //ChangePalettePeriodically();
     currentPalette = PartyColors_p;
 
@@ -90,6 +123,35 @@ void loop()
     FastLED.delay(1000 / UPDATES_PER_SECOND);
 }
 
+//MQTT FUNCTIONALITY/////////////////////////////////////////////////////
+void publisher() {
+  ++value;
+  mqtt.publish("test/outTopic", s+"hello world "+value);
+}
+void desktopRGB_Color_subscriber(String topic, String message) {
+  Serial.println(s+"Message arrived in function 1 ["+topic+"] "+message);
+  redValue = message.substring(4,7).toInt();
+  //Serial.println(valueOne);
+  greenValue = message.substring(9,12).toInt();
+  //Serial.println(valueTwo);
+  blueValue = message.substring(14,17).toInt();
+  //Serial.println(valueThree);
+}
+void desktopRGB_Brightness_subscriber(String topic, String message) {
+  Serial.println(s+"Message arrived in function 2 ["+topic+"] "+message);
+  brightnessValue = message.toInt();
+  setBrightness=brightnessValue;
+}
+void desktopRGB_Spectrum_subscriber(String topic, String message) {
+  Serial.println(s+"Message arrived in function 3 ["+topic+"] "+message);
+  if(message=="true"){
+    spectrumCycle=true;
+  }else{
+    spectrumCycle=false;
+  }
+}
+/////////////////////////////////////////////////////////////////////////
+
 void FillLEDsFromPaletteColors( uint8_t colorIndex)
 {
     uint8_t brightness = 255;
@@ -99,15 +161,21 @@ void FillLEDsFromPaletteColors( uint8_t colorIndex)
         setBrightness=brightness;
     }
     if(firstTime){
-        static int firstTimeBrightness=0;
         firstTimeBrightness++;
         brightness=firstTimeBrightness;
         if(firstTimeBrightness>setBrightness)firstTime=false;
     }
-    for( int i = 0; i < NUM_LEDS; i++) {
-        leds[i] = ColorFromPalette( currentPalette, colorIndex, brightness, currentBlending);
-        colorIndex += 10;
-        delayMicroseconds(750);
+
+    if(spectrumCycle){
+      for( int i = 0; i < NUM_LEDS; i++) {
+          leds[i] = ColorFromPalette( currentPalette, colorIndex, brightness, currentBlending);
+          colorIndex += 10;
+          delayMicroseconds(750);
+      }
+    }else{
+      for(int i=0; i<NUM_LEDS;i++){
+        leds[i].setRGB(redValue,greenValue,blueValue);
+      }
     }
 }
 
