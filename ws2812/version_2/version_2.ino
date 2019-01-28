@@ -52,7 +52,7 @@ void setup() {
     FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
     FastLED.setBrightness(  BRIGHTNESS );
     Serial.begin(115200);
-    
+
     currentPalette = RainbowColors_p;
     currentBlending = LINEARBLEND;
 
@@ -61,63 +61,9 @@ void setup() {
     WiFi.begin(ssid, password);
     while (WiFi.waitForConnectResult() != WL_CONNECTED) {
         Serial.println("Connection Failed! Rebooting...");
-        delay(5000);
+        delay(2000);
         ESP.restart();
     }
-    // Port defaults to 8266
-    // ArduinoOTA.setPort(8266);
-
-    // Hostname defaults to esp8266-[ChipID]
-    ArduinoOTA.setHostname("DesktopRGB");
-
-    // No authentication by default
-    // ArduinoOTA.setPassword("admin");
-
-    // Password can be set with it's md5 value as well
-    // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-    // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
-
-    ArduinoOTA.onStart([]() {
-        String type;
-        if (ArduinoOTA.getCommand() == U_FLASH) {
-            type = "sketch";
-        } else { // U_SPIFFS
-            type = "filesystem";
-        }
-        // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-        Serial.println("Start updating " + type);
-    });
-
-
-    ArduinoOTA.onEnd([]() {
-        Serial.println("\nEnd");
-    });
-
-
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    });
-
-
-    ArduinoOTA.onError([](ota_error_t error) {
-        Serial.printf("Error[%u]: ", error);
-        if (error == OTA_AUTH_ERROR) {
-          Serial.println("Auth Failed");
-        } else if (error == OTA_BEGIN_ERROR) {
-          Serial.println("Begin Failed");
-        } else if (error == OTA_CONNECT_ERROR) {
-          Serial.println("Connect Failed");
-        } else if (error == OTA_RECEIVE_ERROR) {
-          Serial.println("Receive Failed");
-        } else if (error == OTA_END_ERROR) {
-          Serial.println("End Failed");
-        }
-    });
-
-
-    ArduinoOTA.begin();
-    Serial.println("Ready");
-    Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 }
 
@@ -130,16 +76,16 @@ void loop()
 {
     //ChangePalettePeriodically();
     currentPalette = PartyColors_p;
-    
+
     static uint8_t startIndex = 0;
-    startIndex = startIndex + 1; /* motion speed */ 
+    startIndex = startIndex + 1; /* motion speed */
 
     if((millis()-lastTime)>1000){
         lastTime=millis();
         //Serial.println(startIndex);
-    }   
+    }
     FillLEDsFromPaletteColors(startIndex);
-    
+
     FastLED.show();
     FastLED.delay(1000 / UPDATES_PER_SECOND);
 }
@@ -161,7 +107,7 @@ void FillLEDsFromPaletteColors( uint8_t colorIndex)
     for( int i = 0; i < NUM_LEDS; i++) {
         leds[i] = ColorFromPalette( currentPalette, colorIndex, brightness, currentBlending);
         colorIndex += 10;
-        delayMicroseconds(750);    
+        delayMicroseconds(750);
     }
 }
 
@@ -178,7 +124,7 @@ void ChangePalettePeriodically()
 {
     uint8_t secondHand = (millis() / 1000) % 60;
     static uint8_t lastSecond = 99;
-    
+
     if( lastSecond != secondHand) {
         lastSecond = secondHand;
         Serial.println(secondHand);
@@ -217,7 +163,7 @@ void SetupBlackAndWhiteStripedPalette()
     currentPalette[4] = CRGB::White;
     currentPalette[8] = CRGB::White;
     currentPalette[12] = CRGB::White;
-    
+
 }
 
 // This function sets up a palette of purple and green stripes.
@@ -226,7 +172,7 @@ void SetupPurpleAndGreenPalette()
     CRGB purple = CHSV( HUE_PURPLE, 255, 255);
     CRGB green  = CHSV( HUE_GREEN, 255, 255);
     CRGB black  = CRGB::Black;
-    
+
     currentPalette = CRGBPalette16(
                                    green,  green,  black,  black,
                                    purple, purple, black,  black,
@@ -245,12 +191,12 @@ const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM =
     CRGB::Gray, // 'white' is too bright compared to red and blue
     CRGB::Blue,
     CRGB::Black,
-    
+
     CRGB::Red,
     CRGB::Gray,
     CRGB::Blue,
     CRGB::Black,
-    
+
     CRGB::Red,
     CRGB::Red,
     CRGB::Gray,
@@ -280,7 +226,7 @@ const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM =
 // between the 16 explicit entries to create fifteen intermediate palette
 // entries between each pair.
 //
-// So for example, if you set the first two explicit entries of a compact 
-// palette to Green (0,255,0) and Blue (0,0,255), and then retrieved 
+// So for example, if you set the first two explicit entries of a compact
+// palette to Green (0,255,0) and Blue (0,0,255), and then retrieved
 // the first sixteen entries from the virtual palette (of 256), you'd get
 // Green, followed by a smooth gradient from green-to-blue, and then Blue.
