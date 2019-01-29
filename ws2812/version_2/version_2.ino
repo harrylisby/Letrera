@@ -78,17 +78,10 @@ void setup() {
     Serial.print(s+" connected with IP: ");
     Serial.println(WiFi.localIP());
 
-    // Connect to MQTT
-    Serial.print(s+"Connecting to MQTT: "+MQTT_SERVER+" ... ");
-    if (client.connect("DeskopRGB")) {
-      Serial.println("connected");
+    mqttConnect();
 
-      mqtt.subscribe("room/desktopRGB_Color", desktopRGB_Color_subscriber);
-      mqtt.subscribe("room/desktopRGB_Brightness", desktopRGB_Brightness_subscriber);
-      mqtt.subscribe("room/desktopRGB_Spectrum", desktopRGB_Spectrum_subscriber);
-    } else {
-      Serial.println(s+"failed, rc="+client.state());
-    }
+    Serial.println("Letrera RGB controller by Harry Lisby");
+    Serial.println("2019 - based on WeMos D1 Mini - Costa Rica");
 
     // Enable Thread
     thread.onRun(publisher);
@@ -113,14 +106,31 @@ void loop()
     static uint8_t startIndex = 0;
     startIndex = startIndex + 1; /* motion speed */
 
-    if((millis()-lastTime)>1000){
+    if((millis()-lastTime)>5000){
         lastTime=millis();
-        //Serial.println(startIndex);
+        if(client.state()!=0){
+          Serial.println(client.state());
+          mqttConnect();
+        }
     }
     FillLEDsFromPaletteColors(startIndex);
 
     FastLED.show();
     FastLED.delay(1000 / UPDATES_PER_SECOND);
+}
+
+void mqttConnect(){
+  // Connect to MQTT
+  Serial.print(s+"Connecting to MQTT: "+MQTT_SERVER+" ... ");
+  if (client.connect("DeskopRGB")) {
+    Serial.println("connected");
+
+    mqtt.subscribe("room/desktopRGB_Color", desktopRGB_Color_subscriber);
+    mqtt.subscribe("room/desktopRGB_Brightness", desktopRGB_Brightness_subscriber);
+    mqtt.subscribe("room/desktopRGB_Spectrum", desktopRGB_Spectrum_subscriber);
+  } else {
+    Serial.println(s+"failed, rc="+client.state());
+  }
 }
 
 //MQTT FUNCTIONALITY/////////////////////////////////////////////////////
