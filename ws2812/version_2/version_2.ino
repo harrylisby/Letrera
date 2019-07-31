@@ -11,7 +11,7 @@
 //WiFi configuration
 #define ssid "Harry"
 #define password "hlisby5432"
-#define MQTT_SERVER "192.168.1.15"
+#define MQTT_SERVER "192.168.0.15"
 //In the future add AP function for unknown networks
 
 WiFiClient espClient;
