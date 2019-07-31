@@ -9,9 +9,9 @@
 #include <ThreadController.h>
 
 //WiFi configuration
-#define ssid "Lisby 2G"
-#define password "lisby12345"
-#define MQTT_SERVER "192.168.1.10"
+#define ssid "Harry"
+#define password "hlisby5432"
+#define MQTT_SERVER "192.168.1.15"
 //In the future add AP function for unknown networks
 
 WiFiClient espClient;
@@ -150,7 +150,7 @@ void desktopRGB_Color_subscriber(String topic, String message) {
 void desktopRGB_Brightness_subscriber(String topic, String message) {
   Serial.println(s+"Message arrived in function 2 ["+topic+"] "+message);
   brightnessValue = message.toInt();
-  setBrightness=brightnessValue;
+  setBrightness=brightnessValue*2.55; //scales the input from 100 to 255
 }
 void desktopRGB_Spectrum_subscriber(String topic, String message) {
   Serial.println(s+"Message arrived in function 3 ["+topic+"] "+message);
